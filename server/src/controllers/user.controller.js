@@ -7,11 +7,9 @@ const signup = async (req, res) => {
     const { username, password, displayName } = req.body;
 
     const checkUser = await userModel.findOne({ username });
-
-    if (checkUser) return responseHandler.badrequest(res, "username already used");
+    if (checkUser) return responseHandler.badrequest(res, "Username already used");
 
     const user = new userModel();
-
     user.displayName = displayName;
     user.username = username;
     user.setPassword(password);
@@ -20,33 +18,43 @@ const signup = async (req, res) => {
 
     const token = jsonwebtoken.sign(
       { data: user.id },
-      process.env.TOKEN_SECRET,
+      process.env.TOKEN_SECRET_KEY,
       { expiresIn: "24h" }
     );
 
-    responseHandler.created(res, {
+    return responseHandler.created(res, {
       token,
       ...user._doc,
       id: user.id
     });
-  } catch {
-    responseHandler.error(res);
+  } catch (err) {
+    console.error("Signup error:", err);
+    return responseHandler.error(res, err.message || "Internal server error");
   }
 };
+
 
 const signin = async (req, res) => {
   try {
     const { username, password } = req.body;
 
+    if (!username || !password) {
+      return responseHandler.badrequest(res, "Username and password are required");
+    }
+
     const user = await userModel.findOne({ username }).select("username password salt id displayName");
 
-    if (!user) return responseHandler.badrequest(res, "User not exist");
+    if (!user) {
+      return responseHandler.badrequest(res, "User not exist");
+    }
 
-    if (!user.validPassword(password)) return responseHandler.badrequest(res, "Wrong password");
+    if (!user.validPassword(password)) {
+      return responseHandler.badrequest(res, "Wrong password");
+    }
 
     const token = jsonwebtoken.sign(
       { data: user.id },
-      process.env.TOKEN_SECRET,
+      process.env.TOKEN_SECRET_KEY,
       { expiresIn: "24h" }
     );
 
@@ -58,10 +66,12 @@ const signin = async (req, res) => {
       ...user._doc,
       id: user.id
     });
-  } catch {
+  } catch (error) {
+    console.error("Sign-in error:", error);
     responseHandler.error(res);
   }
 };
+
 
 const updatePassword = async (req, res) => {
   try {

@@ -18,7 +18,7 @@ const userApi = {
       );
 
       return { response };
-    } catch (err) { console.log("err"); return { err }; }
+    } catch (err) { console.log(err); return { err }; }
   },
   signup: async ({ username, password, confirmPassword, displayName }) => {
     try {
